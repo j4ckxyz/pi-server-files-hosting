@@ -54,7 +54,7 @@ This is a lightweight server to host your files for OpenWebUI.
 
 3.  **Enter the URL of the server** (e.g., `http://localhost:8000`).
 
-4.  **The tool will be available in the chat interface.**
+4.  **The tool will be available in the chat interface.** You can configure the `api_server_url` and `api_key` in the tool's settings.
 
 ## Systemd Service
 

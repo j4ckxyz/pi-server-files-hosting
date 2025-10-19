@@ -2,11 +2,19 @@ import os
 import requests
 from pydantic import BaseModel, Field
 
-# Configuration
-API_SERVER_URL = os.getenv("API_SERVER_URL", "http://localhost:8000")
-API_KEY = os.getenv("API_KEY")
+
 
 class Tools:
+    class Valves(BaseModel):
+        api_server_url: str = Field(
+            default="http://localhost:8000",
+            description="The URL of the file server.",
+        )
+        api_key: str = Field(
+            default="",
+            description="The API key for the file server.",
+        )
+
     def __init__(self):
         pass
 
@@ -14,11 +22,11 @@ class Tools:
         """
         Lists the available files on the server.
         """
-        if not API_KEY:
-            return "API key is not set in the environment variable 'API_KEY'."
+        if not self.valves.api_key:
+            return "API key is not set in the tool's valves."
 
         try:
-            response = requests.get(f"{API_SERVER_URL}/files", headers={"X-API-Key": API_KEY})
+            response = requests.get(f"{self.valves.api_server_url}/files", headers={"X-API-Key": self.valves.api_key})
             response.raise_for_status()
             data = response.json()
             return f"Available files: {', '.join(data['files'])}"
@@ -32,13 +40,13 @@ class Tools:
         """
         Searches for content in the files.
         """
-        if not API_KEY:
-            return "API key is not set in the environment variable 'API_KEY'."
+        if not self.valves.api_key:
+            return "API key is not set in the tool's valves."
 
         try:
             response = requests.post(
-                f"{API_SERVER_URL}/search",
-                headers={"X-API-Key": API_KEY, "Content-Type": "application/json"},
+                f"{self.valves.api_server_url}/search",
+                headers={"X-API-Key": self.valves.api_key, "Content-Type": "application/json"},
                 json={"query": query},
             )
             response.raise_for_status()
@@ -63,11 +71,11 @@ class Tools:
         """
         Retrieves the content of a specific file.
         """
-        if not API_KEY:
-            return "API key is not set in the environment variable 'API_KEY'."
+        if not self.valves.api_key:
+            return "API key is not set in the tool's valves."
 
         try:
-            response = requests.get(f"{API_SERVER_URL}/files/{filename}", headers={"X-API-Key": API_KEY})
+            response = requests.get(f"{self.valves.api_server_url}/files/{filename}", headers={"X-API-Key": self.valves.api_key})
             response.raise_for_status()
             data = response.json()
             return f"Content of {filename}:\n\n{data['content']}"
