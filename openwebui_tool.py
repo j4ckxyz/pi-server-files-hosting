@@ -16,7 +16,7 @@ class Tools:
         )
 
     def __init__(self):
-        pass
+        self.valves = self.Valves()
 
     def list_files(self) -> str:
         """
