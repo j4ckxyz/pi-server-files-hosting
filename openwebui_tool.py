@@ -38,7 +38,7 @@ class Tools:
         query: str = Field(..., description="The content to search for in the files."),
     ) -> str:
         """
-        Searches for content in the files.
+        Searches for content in the files. Uses automatic variations (case-insensitive, acronyms, spacing variants).
         """
         if not self.valves.api_key:
             return "API key is not set in the tool's valves."
@@ -52,15 +52,18 @@ class Tools:
             response.raise_for_status()
             data = response.json()
             results = data.get("results", [])
+            variations = data.get("searched_variations", [])
+            
             if not results:
-                return f"No results found for '{query}'."
+                return f"No results found for '{query}'. Searched variations: {', '.join(variations)}"
 
             formatted_results = []
             for result in results:
+                matched = result.get('matched_term', query)
                 formatted_results.append(
-                    f"- File: {result['file']}, Line: {result['line']}, Content: {result['content']}"
+                    f"- File: {result['file']}, Line: {result['line']}, Matched: '{matched}', Content: {result['content']}"
                 )
-            return f"Search results for '{query}':\n" + "\n".join(formatted_results)
+            return f"Search results for '{query}' (searched: {', '.join(variations)}):\n" + "\n".join(formatted_results)
         except requests.RequestException as e:
             return f"Error searching files: {str(e)}"
 
