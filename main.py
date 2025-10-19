@@ -57,9 +57,16 @@ def generate_search_variations(query: str) -> Set[str]:
         
         variations.add("-".join(words).lower())
         variations.add("_".join(words).lower())
+        variations.add("—".join(words).lower())
     
     variations.add(query.replace("-", " ").lower())
     variations.add(query.replace("_", " ").lower())
+    variations.add(query.replace("—", " ").lower())
+    variations.add(query.replace("—", "-").lower())
+    
+    for word in words:
+        if len(word) > 3:
+            variations.add(word.lower())
     
     return variations
 
@@ -108,11 +115,16 @@ def search_files(request: SearchRequest, api_key: str = Security(get_api_key)):
             lines = content.split("\n")
             for i, line in enumerate(lines):
                 if matched_variation in line.lower():
+                    context_before = "\n".join(lines[max(0, i-3):i])
+                    context_after = "\n".join(lines[i+1:min(len(lines), i+4)])
+                    
                     results.append({
                         "file": os.path.basename(filepath),
                         "line": i + 1,
                         "content": line.strip(),
-                        "matched_term": matched_variation
+                        "matched_term": matched_variation,
+                        "context_before": context_before.strip(),
+                        "context_after": context_after.strip()
                     })
     
     return {"results": results, "searched_variations": list(search_variations), "files_searched": len(all_files)}
