@@ -36,7 +36,9 @@ def list_files(api_key: str = Security(get_api_key)):
     files = []
     for ext in ("*.pdf", "*.md", "*.txt"):
         files.extend(glob.glob(os.path.join(DATA_LOCATION, ext)))
-    return {"files": [os.path.basename(f) for f in files]}
+        files.extend(glob.glob(os.path.join(DATA_LOCATION, "**", ext), recursive=True))
+    unique_files = sorted(set(files))
+    return {"files": [os.path.basename(f) for f in unique_files]}
 
 class SearchRequest(BaseModel):
     query: str
@@ -85,29 +87,35 @@ def search_files(request: SearchRequest, api_key: str = Security(get_api_key)):
     results = []
     search_variations = generate_search_variations(request.query)
     
+    all_files = []
     for ext in ("*.pdf", "*.md", "*.txt"):
-        for filepath in glob.glob(os.path.join(DATA_LOCATION, ext)):
-            content = read_file_content(filepath)
-            content_lower = content.lower()
-            
-            matched_variation = None
-            for variation in search_variations:
-                if variation in content_lower:
-                    matched_variation = variation
-                    break
-            
-            if matched_variation:
-                lines = content.split("\n")
-                for i, line in enumerate(lines):
-                    if matched_variation in line.lower():
-                        results.append({
-                            "file": os.path.basename(filepath),
-                            "line": i + 1,
-                            "content": line.strip(),
-                            "matched_term": matched_variation
-                        })
+        all_files.extend(glob.glob(os.path.join(DATA_LOCATION, ext)))
+        all_files.extend(glob.glob(os.path.join(DATA_LOCATION, "**", ext), recursive=True))
     
-    return {"results": results, "searched_variations": list(search_variations)}
+    all_files = list(set(all_files))
+    
+    for filepath in all_files:
+        content = read_file_content(filepath)
+        content_lower = content.lower()
+        
+        matched_variation = None
+        for variation in search_variations:
+            if variation in content_lower:
+                matched_variation = variation
+                break
+        
+        if matched_variation:
+            lines = content.split("\n")
+            for i, line in enumerate(lines):
+                if matched_variation in line.lower():
+                    results.append({
+                        "file": os.path.basename(filepath),
+                        "line": i + 1,
+                        "content": line.strip(),
+                        "matched_term": matched_variation
+                    })
+    
+    return {"results": results, "searched_variations": list(search_variations), "files_searched": len(all_files)}
 
 @app.get("/files/{filename}", summary="Get the content of a specific file")
 def get_file(filename: str, api_key: str = Security(get_api_key)):
@@ -116,3 +124,18 @@ def get_file(filename: str, api_key: str = Security(get_api_key)):
         raise HTTPException(status_code=404, detail="File not found")
     content = read_file_content(filepath)
     return {"content": content}
+
+@app.get("/debug", summary="Debug information")
+def debug_info(api_key: str = Security(get_api_key)):
+    all_files = []
+    for ext in ("*.pdf", "*.md", "*.txt"):
+        all_files.extend(glob.glob(os.path.join(DATA_LOCATION, ext)))
+        all_files.extend(glob.glob(os.path.join(DATA_LOCATION, "**", ext), recursive=True))
+    
+    return {
+        "data_location": DATA_LOCATION,
+        "data_location_exists": os.path.exists(DATA_LOCATION) if DATA_LOCATION else False,
+        "total_files": len(set(all_files)),
+        "sample_files": [os.path.basename(f) for f in sorted(set(all_files))[:10]],
+        "pdf_support": PDF_SUPPORT
+    }
